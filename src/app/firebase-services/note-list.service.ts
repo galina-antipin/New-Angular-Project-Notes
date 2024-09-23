@@ -8,6 +8,11 @@ import {
   onSnapshot,
   addDoc,
   updateDoc,
+  deleteDoc,
+  orderBy,
+  query,
+  limit,
+  where
 } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 
@@ -17,15 +22,25 @@ import { Observable } from 'rxjs';
 export class NoteListService {
   trashNotes: Note[] = [];
   normalNotes: Note[] = [];
+  normalMarkedNotes: Note[] = [];
 
   unsubTrash;
   unsubNotes;
+  unsubMarkedNotes;
+
 
   firestore: Firestore = inject(Firestore);
 
   constructor() {
     this.unsubNotes = this.subNotesList();
+    this.unsubMarkedNotes = this.subMarkedNotesList();
     this.unsubTrash = this.subTrashList();
+  }
+
+  async deleteNote(colId: string, docId: string) {
+    await deleteDoc(this.getSingleDocRef(colId, docId)).catch(
+      (err) => {console.log(err)}
+    )
   }
 
   async updateNote(note:Note) {
@@ -53,19 +68,19 @@ export class NoteListService {
     }
   }
 
-  async addNote(item: Note) {
-    const docRef = await addDoc(this.getNotesRef(), item)
-      .catch((err) => {
-        console.error(err);
-      })
-      .then((docRef) => {
-        console.log('bla bla:', docRef?.id);
-      });
+  async addNote(item: Note, colId: 'notes' | 'trash') {
+    try {
+      const docRef = await addDoc(this.getSingleDocRef(colId), this.getCleanJson(item));
+      console.log('Document added with ID: ', docRef.id);
+    } catch (err) {
+      console.error('Error adding note: ', err);
+    }
   }
 
   ngonDestroy() {
     this.unsubNotes();
     this.unsubTrash();
+    this.unsubMarkedNotes();
   }
 
   subTrashList() {
@@ -78,13 +93,24 @@ export class NoteListService {
   }
 
   subNotesList() {
-    return onSnapshot(this.getNotesRef(), (list) => {
-      this.normalNotes = [];
-      list.forEach((element) => {
-        this.normalNotes.push(this.setNoteObject(element.data(), element.id));
-      });
+    const q = query(this.getNotesRef(), limit(100));
+    return onSnapshot(q, (list) => {
+        this.normalNotes = []; 
+        list.forEach((element) => {
+            this.normalNotes.push(this.setNoteObject(element.data(), element.id)); 
+        });
     });
-  }
+}
+
+subMarkedNotesList() {
+  const q = query(this.getNotesRef(), where('marked', '==', 'false'), limit(100));
+  return onSnapshot(q, (list) => {
+      this.normalMarkedNotes = []; 
+      list.forEach((element) => {
+          this.normalMarkedNotes.push(this.setNoteObject(element.data(), element.id)); 
+      });
+  });
+}
 
   setNoteObject(obj: any, id: string): Note {
     return {
