@@ -23,6 +23,10 @@ export class NoteListComponent {
     this.noteList = this.getDummyData()
   }
 
+  getList(): Note []{
+    return this.noteService.normalNotes;
+  }
+
   changeFavFilter(filter:"all" | "fav"){
     this.favFilter = filter;
   }
