@@ -40,8 +40,8 @@ export class NoteListService {
   async deleteNote(colId: string, docId: string) {
     await deleteDoc(this.getSingleDocRef(colId, docId)).catch(
       (err) => {console.log(err)}
-    )
-  }
+    );
+}
 
   async updateNote(note:Note) {
     if(note.id){
@@ -70,7 +70,8 @@ export class NoteListService {
 
   async addNote(item: Note, colId: 'notes' | 'trash') {
     try {
-      const docRef = await addDoc(this.getSingleDocRef(colId), this.getCleanJson(item));
+      const colRef = this.getNotesRef()
+      const docRef = await addDoc(colRef, this.getCleanJson(item));
       console.log('Document added with ID: ', docRef.id);
     } catch (err) {
       console.error('Error adding note: ', err);
